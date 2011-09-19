@@ -7,6 +7,7 @@
 (defclass remote-node ()
   ((socket :reader remote-node-socket :initarg :socket)
    (atom-cache :reader remote-node-atom-cache :initform (make-atom-cache))
+   (lock :reader remote-node-lock :initform (bt:make-lock))
    (port :reader remote-node-port :initarg :port)
    (node-type :initarg :node-type) ;; 'ERLANG or 'HIDDEN
    (protocol :initarg :protocol :initform 0) ;; 0 (TCP/IP v4)
@@ -80,8 +81,21 @@
   (push remote-node *remote-nodes*)
   t)
 
-(defun find-connected-remote-node (node-name) ;; Make NODE-NAME a node designator
+#|(defun find-connected-remote-node (node-name) ;; Make NODE-NAME a node designator
   (find node-name *remote-nodes* :key #'remote-node-name :test #'string=)) ;; Perhaps also check full name?
+|#
+
+(defun find-connected-remote-node (node-name)
+  (flet ((node-name= (node-name1 node-name2)
+	   (let ((len1 (length node-name1))
+		 (len2 (length node-name2)))
+	     (if (> len1 len2)
+		 (string= (subseq node-name1 0 len2) node-name2)
+		 (string= (subseq node-name2 0 len1) node-name1)))))
+    (when (symbolp node-name)
+      (setf node-name (symbol-name node-name)))
+    (find node-name *remote-nodes* :key #'cleric::remote-node-name :test #'node-name=)))
+
 
 (defun remote-node-sockets ()
   (mapcar #'remote-node-socket *remote-nodes*))
