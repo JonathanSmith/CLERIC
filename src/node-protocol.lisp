@@ -11,28 +11,30 @@
 
 (defun reg-send (from-pid to-name node message) ;; Merge with SEND in the future
   "Send a message to a registered Pid."
-  (let* ((remote-node (find-connected-remote-node node))
-         (stream (socket-stream remote-node)))
-    (write-node-message (make-instance 'reg-send
-                                       :from-pid from-pid
-                                       :to-name (make-symbol to-name)
-                                       :message message)
-                        stream
-                        :distribution-header t
-                        :cache-atoms t)
-    (finish-output stream)))
+  (let ((remote-node (find-connected-remote-node node)))
+    (bt:with-lock-held ((remote-node-lock remote-node))
+      (let  ((stream (socket-stream remote-node)))
+	(write-node-message (make-instance 'reg-send
+					   :from-pid from-pid
+					   :to-name (make-symbol to-name)
+					   :message message)
+			    stream
+			    :distribution-header t
+			    :cache-atoms t)
+	(finish-output stream)))))
 
 (defun send (to-pid message)
   "Send a message to Pid."
-  (let* ((remote-node (find-connected-remote-node (node to-pid)))
-         (stream (socket-stream remote-node)))
-    (write-node-message (make-instance 'send
-                                       :to-pid to-pid
-                                       :message message)
-                        stream
-                        :distribution-header t
-                        :cache-atoms t)
-    (finish-output stream)))
+  (let ((remote-node (find-connected-remote-node (node to-pid))))
+    (bt:with-lock-held ((remote-node-lock remote-node))
+      (let ((stream (socket-stream remote-node)))
+	(write-node-message (make-instance 'send
+					   :to-pid to-pid
+					   :message message)
+			    stream
+			    :distribution-header t
+			    :cache-atoms t)
+	(finish-output stream)))))
 
 (defun link (from-pid to-pid)
   "Create a link between two Pids."
