@@ -38,27 +38,29 @@
 
 (defun link (from-pid to-pid)
   "Create a link between two Pids."
-  (let* ((remote-node (find-connected-remote-node (node to-pid)))
-         (stream (socket-stream remote-node)))
-    (write-node-message (make-instance 'link
-                                       :from-pid from-pid
-                                       :to-pid to-pid)
-                        stream
-                        :distribution-header t
-                        :cache-atoms t)
-    (finish-output stream)))
+  (let ((remote-node (find-connected-remote-node (node to-pid))))
+    (bt:with-lock-held ((remote-node-lock remote-node))
+      (let ((stream (socket-stream remote-node)))
+	(write-node-message (make-instance 'link
+					   :from-pid from-pid
+					   :to-pid to-pid)
+			    stream
+			    :distribution-header t
+			    :cache-atoms t)
+	(finish-output stream)))))
 
 (defun unlink (from-pid to-pid)
   "Remove a link between two Pids."
-  (let* ((remote-node (find-connected-remote-node (node to-pid)))
-         (stream (socket-stream remote-node)))
-    (write-node-message (make-instance 'unlink
-                                       :from-pid from-pid
-                                       :to-pid to-pid)
-                        stream
-                        :distribution-header t
-                        :cache-atoms t)
-    (finish-output stream)))
+  (let* ((remote-node (find-connected-remote-node (node to-pid))))
+    (bt:with-lock-held ((remote-node-lock remote-node))
+      (let ((stream (socket-stream remote-node)))
+	(write-node-message (make-instance 'unlink
+					   :from-pid from-pid
+					   :to-pid to-pid)
+			    stream
+			    :distribution-header t
+			    :cache-atoms t)
+	(finish-output stream)))))
 
 
 ;;;
